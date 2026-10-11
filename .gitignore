@@ -1,0 +1,24 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build and dependency outputs
+**/target/
+**/node_modules/
+frontend/dist/
+
+# Editor and operating system files
+.DS_Store
+**/.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Logs and temporary files
+*.log
+*.tmp
+*.zip
