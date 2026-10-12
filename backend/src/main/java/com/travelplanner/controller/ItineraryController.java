@@ -4,7 +4,6 @@ import com.travelplanner.dto.ItineraryRequest;
 import com.travelplanner.dto.ItineraryResponse;
 import com.travelplanner.entity.Itinerary;
 import com.travelplanner.entity.User;
-import com.travelplanner.repository.DestinationRepository;
 import com.travelplanner.repository.ItineraryRepository;
 import com.travelplanner.repository.UserRepository;
 import com.travelplanner.repository.BookingRepository;
@@ -24,32 +23,21 @@ import java.util.Map;
 public class ItineraryController {
   private final ItineraryRepository repo;
   private final UserRepository users;
-  private final DestinationRepository destinations;
   private final BookingRepository bookings;
 
   public ItineraryController(
       ItineraryRepository repo,
       UserRepository users,
-      DestinationRepository destinations,
       BookingRepository bookings
   ) {
     this.repo = repo;
     this.users = users;
-    this.destinations = destinations;
     this.bookings = bookings;
   }
 
   private User user(Authentication authentication) {
     return users.findByEmailIgnoreCase(authentication.getName())
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-  }
-
-  private boolean belowDestinationBudget(ItineraryRequest request) {
-    String destinationName = request.destination().trim();
-
-    return destinations.findByNameIgnoreCase(destinationName)
-        .map(destination -> request.budget() < destination.getAverageBudget())
-        .orElse(false);
   }
 
   private void fill(Itinerary itinerary, ItineraryRequest request) {
@@ -71,8 +59,9 @@ public class ItineraryController {
     itinerary.setNotes(request.notes());
   }
 
-  private void updateApprovalStatus(Itinerary itinerary, ItineraryRequest request) {
-    itinerary.setStatus(belowDestinationBudget(request) ? "PENDING" : "PLANNED");
+  private void updateApprovalStatus(Itinerary itinerary) {
+    // Every user submission must be reviewed, irrespective of the trip budget.
+    itinerary.setStatus("PENDING");
   }
 
   @GetMapping
@@ -91,7 +80,7 @@ public class ItineraryController {
     Itinerary itinerary = new Itinerary();
     fill(itinerary, request);
     itinerary.setUser(user(authentication));
-    updateApprovalStatus(itinerary, request);
+    updateApprovalStatus(itinerary);
 
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ItineraryResponse.from(repo.save(itinerary)));
@@ -112,7 +101,7 @@ public class ItineraryController {
     }
 
     fill(itinerary, request);
-    updateApprovalStatus(itinerary, request);
+    updateApprovalStatus(itinerary);
 
     return ItineraryResponse.from(repo.save(itinerary));
   }
